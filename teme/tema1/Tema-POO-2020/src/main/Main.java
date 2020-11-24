@@ -72,7 +72,6 @@ public final class Main {
 
         //TODO add here the entry point to your implementation
 
-
         fileWriter.closeJSON(arrayResult);
     }
 }
