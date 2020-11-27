@@ -40,8 +40,9 @@ public final class Season {
         return ratings;
     }
 
+    // Changed this method to create new Array instead of copying the reference
     public void setRatings(final List<Double> ratings) {
-        this.ratings = ratings;
+        this.ratings = new ArrayList<>(ratings);
     }
 
     @Override

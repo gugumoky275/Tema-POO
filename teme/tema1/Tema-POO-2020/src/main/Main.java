@@ -5,14 +5,22 @@ import checker.Checker;
 import common.Constants;
 import fileio.Input;
 import fileio.InputLoader;
+import fileio.UserInputData;
 import fileio.Writer;
-import org.json.simple.JSONArray;
+import fileio.MovieInputData;
+import fileio.ActionInputData;
+import fileio.SerialInputData;
+import entertainment.Season;
+import solution.ProcessAction;
 
+import org.json.simple.JSONArray;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -69,9 +77,34 @@ public final class Main {
 
         Writer fileWriter = new Writer(filePath2);
         JSONArray arrayResult = new JSONArray();
+        // End of your code
 
-        //TODO add here the entry point to your implementation
+        List<Double> showRatings = new ArrayList<>();
+        for (int i = 0; i < input.getUsers().size(); i++) {
+            showRatings.add(0.0);
+        }
 
+        for (MovieInputData movie : input.getMovies()) {
+            movie.setRatings(showRatings);
+        }
+        for (SerialInputData serial : input.getSerials()) {
+            for (Season season : serial.getSeasons()) {
+                season.setRatings(showRatings);
+            }
+        }
+
+        ProcessAction processAction = new ProcessAction(input, arrayResult);
+        for (ActionInputData action : input.getCommands()) {
+            switch (action.getActionType()) {
+                case "command" -> processAction.processCommand(action);
+                case "query" -> processAction.processQuery(action);
+                case "recommendation" -> processAction.processRecommendation(action);
+                default -> System.out.println("Incorrect action");
+            }
+        }
+
+
+        // End of my code
         fileWriter.closeJSON(arrayResult);
     }
 }
