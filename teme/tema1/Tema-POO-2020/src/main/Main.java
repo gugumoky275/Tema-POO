@@ -5,7 +5,6 @@ import checker.Checker;
 import common.Constants;
 import fileio.Input;
 import fileio.InputLoader;
-import fileio.UserInputData;
 import fileio.Writer;
 import fileio.MovieInputData;
 import fileio.ActionInputData;

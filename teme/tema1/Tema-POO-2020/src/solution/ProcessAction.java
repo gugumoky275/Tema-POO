@@ -2,15 +2,21 @@ package solution;
 
 import actor.ActorsAwards;
 import common.Constants;
+import entertainment.Genre;
 import entertainment.Season;
-import fileio.*;
+
+import fileio.SerialInputData;
+import fileio.MovieInputData;
+import fileio.UserInputData;
+import fileio.ActorInputData;
+import fileio.Input;
+import fileio.ActionInputData;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import utils.Utils;
 
-import java.io.Serial;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 public class ProcessAction {
@@ -23,7 +29,7 @@ public class ProcessAction {
      */
     private final JSONArray arrayResult;
 
-    public ProcessAction(Input input, JSONArray arrayResult) {
+    public ProcessAction(final Input input, final JSONArray arrayResult) {
         this.input = input;
         this.arrayResult = arrayResult;
     }
@@ -33,97 +39,116 @@ public class ProcessAction {
      * "action" type command
      * @param action the action that needs to be done
      */
-    public void processCommand(ActionInputData action) {
+    public void processCommand(final ActionInputData action) {
         JSONObject object = new JSONObject();
         object.put(Constants.ID_STRING, action.getActionId());
-        boolean ok = true;
-        boolean auxiliaryOk = true;
 
         switch (action.getType()) {
             case "favorite" -> {
                 for (UserInputData user : input.getUsers()) {
                     if (user.getUsername().equals(action.getUsername())) {
-                        for (Map.Entry<String, Integer> element : user.getHistory().entrySet()) {
-                            if (element.getKey().equals(action.getTitle())) {
-                                auxiliaryOk = false;
-                                for (String favourite : user.getFavoriteMovies()) {
-                                    if (favourite.equals(action.getTitle())) {
-                                        object.put(Constants.MESSAGE, "error -> " + action.getTitle() + " is already in favourite list");
-                                        ok = false;
-                                        break;
-                                    }
-                                }
-                                if (ok) {
-                                    user.getFavoriteMovies().add(action.getTitle());
-                                    object.put(Constants.MESSAGE, "success -> " + action.getTitle() + " was added as favourite");
-                                }
+                        if (user.getHistory().containsKey(action.getTitle())) {
+                            if (user.getFavoriteMovies().contains(action.getTitle())) {
+                                object.put(Constants.MESSAGE, "error -> "
+                                        + action.getTitle()
+                                        + " is already in favourite list");
+
+                            } else {
+                                user.getFavoriteMovies().add(action.getTitle());
+                                object.put(Constants.MESSAGE, "success -> "
+                                        + action.getTitle()
+                                        + " was added as favourite");
                             }
+                        } else {
+                            object.put(Constants.MESSAGE, "error -> "
+                                    + action.getTitle()
+                                    + " is not seen");
                         }
-                        if (auxiliaryOk) {
-                            object.put(Constants.MESSAGE, "error -> " + action.getTitle() + " is not seen");
-                        }
+                        break;
                     }
                 }
             }
             case "view" -> {
                 for (UserInputData user : input.getUsers()) {
                     if (user.getUsername().equals(action.getUsername())) {
-                        for (Map.Entry<String, Integer> element : user.getHistory().entrySet()) {
-                            if (element.getKey().equals(action.getTitle())) {
-                                user.getHistory().put(action.getTitle(), element.getValue() + 1);
-                                object.put(Constants.MESSAGE, "success -> " + action.getTitle() + " was viewed with total views of " + element.getValue());
-                                ok = false;
-                                break;
-                            }
-                        }
-                        if (ok) {
+                        if (user.getHistory().containsKey(action.getTitle())) {
+                            user.getHistory().put(action.getTitle(),
+                                    user.getHistory().get(action.getTitle()) + 1);
+                            object.put(Constants.MESSAGE, "success -> "
+                                    + action.getTitle() + " was viewed with total views of "
+                                    + user.getHistory().get(action.getTitle()));
+
+                        } else {
                             user.getHistory().put(action.getTitle(), 1);
-                            object.put(Constants.MESSAGE, "success -> " + action.getTitle() + " was viewed with total views of 1");
+                            object.put(Constants.MESSAGE, "success -> "
+                                    + action.getTitle()
+                                    + " was viewed with total views of 1");
                         }
+                        break;
                     }
                 }
             }
             case "rating" -> {
                 int cnt = -1;
+                boolean ok = true;
+
                 for (UserInputData user : input.getUsers()) {
                     cnt++;
                     if (user.getUsername().equals(action.getUsername())) {
-                        for (Map.Entry<String, Integer> element : user.getHistory().entrySet()) {
-                            if (element.getKey().equals(action.getTitle())) {
-                                for (MovieInputData movie : input.getMovies()) {
-                                    if (action.getTitle().equals(movie.getTitle())) {
-                                        if (!(movie.getRatings().get(cnt).equals(0.0))) {
-                                            object.put(Constants.MESSAGE, "error -> " + action.getTitle() + " has been already rated");
-                                        } else {
-                                            ArrayList<Double> tempList = new ArrayList<>(movie.getRatings());
-                                            tempList.set(cnt, action.getGrade());
-                                            movie.setRatings(tempList);
-                                            object.put(Constants.MESSAGE, "success -> " + action.getTitle() + " was rated with " + action.getGrade() + " by " + action.getUsername());
-                                        }
-                                        ok = false;
-                                        break;
+                        if (user.getHistory().containsKey(action.getTitle())) {
+                            for (MovieInputData movie : input.getMovies()) {
+                                if (action.getTitle().equals(movie.getTitle())) {
+                                    if (!(movie.getRatings().get(cnt).equals(0.0))) {
+                                        object.put(Constants.MESSAGE, "error -> "
+                                                + action.getTitle()
+                                                + " has been already rated");
+                                    } else {
+                                        ArrayList<Double> tempList =
+                                                new ArrayList<>(movie.getRatings());
+                                        tempList.set(cnt, action.getGrade());
+                                        movie.setRatings(tempList);
+                                        object.put(Constants.MESSAGE, "success -> "
+                                                + action.getTitle()
+                                                + " was rated with "
+                                                + action.getGrade()
+                                                + " by " + action.getUsername());
                                     }
+                                    ok = false;
+                                    break;
                                 }
-                                for (SerialInputData serial : input.getSerials()) {
-                                    if (action.getTitle().equals(serial.getTitle())) {
-                                        Season season = serial.getSeasons().get(action.getSeasonNumber() - 1);
-                                        if (!(season.getRatings().get(cnt).equals(0.0))) {
-                                            object.put(Constants.MESSAGE, "error -> " + action.getTitle() + " has been already rated");
-                                        } else {
-                                            ArrayList<Double> tempList = new ArrayList<>(season.getRatings());
-                                            tempList.set(cnt, action.getGrade());
-                                            season.setRatings(tempList);
-                                            object.put(Constants.MESSAGE, "success -> " + action.getTitle() + " was rated with " + action.getGrade() + " by " + action.getUsername());
-                                        }
-                                        ok = false;
-                                        break;
+                            }
+                            for (SerialInputData serial : input.getSerials()) {
+                                if (action.getTitle().equals(serial.getTitle())) {
+                                    Season season =
+                                            serial.getSeasons().get(action.getSeasonNumber() - 1);
+
+                                    if (!(season.getRatings().get(cnt).equals(0.0))) {
+                                        object.put(Constants.MESSAGE, "error -> "
+                                                + action.getTitle()
+                                                + " has been already rated");
+                                    } else {
+                                        ArrayList<Double> tempList =
+                                                new ArrayList<>(season.getRatings());
+                                        tempList.set(cnt, action.getGrade());
+                                        season.setRatings(tempList);
+                                        object.put(Constants.MESSAGE, "success -> "
+                                                + action.getTitle()
+                                                + " was rated with "
+                                                + action.getGrade()
+                                                + " by "
+                                                + action.getUsername());
                                     }
+                                    ok = false;
+                                    break;
                                 }
                             }
                         }
                         if (ok) {
-                            object.put(Constants.MESSAGE, "error -> " + action.getTitle() + " is not seen");
+                            object.put(Constants.MESSAGE, "error -> "
+                                    + action.getTitle()
+                                    + " is not seen");
                         }
+                        break;
                     }
                 }
             }
@@ -137,10 +162,11 @@ public class ProcessAction {
      * "query" type command
      * @param action the action that needs to be done
      */
-    public void processQuery(ActionInputData action) {
+    public void processQuery(final ActionInputData action) {
         JSONObject object = new JSONObject();
         object.put(Constants.ID_STRING, action.getActionId());
         StringBuilder message = new StringBuilder("Query result: [");
+
         int cnt;
         boolean ok;
         String stringAux;
@@ -148,7 +174,7 @@ public class ProcessAction {
         switch (action.getObjectType()) {
             case "actors" -> {
                 ArrayList<String> copyActors = new ArrayList<>();
-                boolean auxiliaryOk;
+
 
                 switch (action.getCriteria()) {
                     case "average" -> {
@@ -198,8 +224,10 @@ public class ProcessAction {
                             for (String title : actor.getFilmography()) {
                                 for (MovieInputData movie : input.getMovies()) {
                                     if (movie.getTitle().equals(title)) {
-                                        if (!(movieRatings.get(input.getMovies().indexOf(movie)).equals(0.0))) {
-                                            result += movieRatings.get(input.getMovies().indexOf(movie));
+                                        if (!(movieRatings.get(input.getMovies().indexOf(movie))
+                                                .equals(0.0))) {
+                                            result += movieRatings
+                                                    .get(input.getMovies().indexOf(movie));
                                             cnt++;
                                             break;
                                         }
@@ -207,14 +235,17 @@ public class ProcessAction {
                                 }
                                 for (SerialInputData serial : input.getSerials()) {
                                     if (serial.getTitle().equals(title)) {
-                                        if (!(serialRatings.get(input.getSerials().indexOf(serial)).equals(0.0))) {
-                                            result += serialRatings.get(input.getSerials().indexOf(serial));
+                                        if (!(serialRatings.get(input.getSerials().indexOf(serial))
+                                                .equals(0.0))) {
+                                            result += serialRatings.get(input.getSerials()
+                                                    .indexOf(serial));
                                             cnt++;
                                             break;
                                         }
                                     }
                                 }
                             }
+
                             if (cnt != 0) {
                                 result /= cnt;
                                 actorRatings.add(result);
@@ -224,23 +255,20 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyActors.size() - 1; i++) {
                             for (int j = i + 1; j < copyActors.size(); j++) {
-                                ok = false;
-                                if ((Double.compare(actorRatings.get(i), actorRatings.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((Double.compare(actorRatings.get(i), actorRatings.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if ((Double.compare(actorRatings.get(i), actorRatings.get(j)) == 0)) {
-                                    if ((copyActors.get(i).compareTo(copyActors.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyActors.get(i).compareTo(copyActors.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((Double.compare(actorRatings.get(i),
+                                        actorRatings.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((Double.compare(actorRatings.get(i),
+                                        actorRatings.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))
+                                        || (((Double.compare(actorRatings.get(i),
+                                        actorRatings.get(j)) == 0))
+                                        && (((copyActors.get(i).compareTo(copyActors.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyActors.get(i).compareTo(copyActors.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     doubleAux = actorRatings.get(i);
                                     actorRatings.set(i, actorRatings.get(j));
                                     actorRatings.set(j, doubleAux);
@@ -258,26 +286,23 @@ public class ProcessAction {
 
                         for (ActorInputData actor : input.getActors()) {
                             result = 0;
-                            auxiliaryOk = true;
 
-                            for (Map.Entry<ActorsAwards, Integer> element : actor.getAwards().entrySet()) {
+                            for (Map.Entry<ActorsAwards, Integer> element
+                                    : actor.getAwards().entrySet()) {
                                 result += element.getValue();
                             }
 
-                            for (String searchedAward : action.getFilters().get(3)) {
-                                ok = false;
-                                for (Map.Entry<ActorsAwards, Integer> element : actor.getAwards().entrySet()) {
-                                    if (element.getKey().equals(Utils.stringToAwards(searchedAward))) {
-                                        ok = true;
-                                        break;
-                                    }
-                                }
-                                if (!ok) {
-                                    auxiliaryOk = false;
+                            ok = true;
+                            for (String searchedAward
+                                    : action.getFilters().get(Constants.AWARDS_INDEX)) {
+                                if (!(actor.getAwards().containsKey(Utils
+                                        .stringToAwards(searchedAward)))) {
+                                    ok = false;
                                     break;
                                 }
                             }
-                            if (auxiliaryOk) {
+
+                            if (ok) {
                                 awardsCount.add(result);
                                 copyActors.add(actor.getName());
                             }
@@ -285,23 +310,17 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyActors.size() - 1; i++) {
                             for (int j = i + 1; j < copyActors.size(); j++) {
-                                ok = false;
-                                if (awardsCount.get(i) < awardsCount.get(j) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if (awardsCount.get(i) > awardsCount.get(j) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if (awardsCount.get(i).equals(awardsCount.get(j))) {
-                                    if ((copyActors.get(i).compareTo(copyActors.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyActors.get(i).compareTo(copyActors.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((awardsCount.get(i) < awardsCount.get(j))
+                                        && (action.getSortType().equals("desc")))
+                                        || ((awardsCount.get(i) > awardsCount.get(j))
+                                        && (action.getSortType().equals("asc")))
+                                        || (((awardsCount.get(i).equals(awardsCount.get(j))))
+                                        && (((copyActors.get(i).compareTo(copyActors.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyActors.get(i).compareTo(copyActors.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     intAux = awardsCount.get(i);
                                     awardsCount.set(i, awardsCount.get(j));
                                     awardsCount.set(j, intAux);
@@ -315,13 +334,15 @@ public class ProcessAction {
                     }
                     case "filter_description" -> {
                         String description;
+                        boolean auxiliaryOk;
 
                         for (ActorInputData actor : input.getActors()) {
                             description = actor.getCareerDescription().toLowerCase();
                             auxiliaryOk = true;
-                            for (String searchedWord : action.getFilters().get(2)) {
+                            for (String searchedWord
+                                    : action.getFilters().get(Constants.WORDS_INDEX)) {
                                 ok = false;
-                                for (String word : description.split("[-.?! +/\n]+")) {
+                                for (String word : description.split("[? .!+/,\n-]+")) {
                                     if (searchedWord.toLowerCase().equals(word)) {
                                         ok = true;
                                         break;
@@ -332,6 +353,7 @@ public class ProcessAction {
                                     break;
                                 }
                             }
+
                             if (auxiliaryOk) {
                                 copyActors.add(actor.getName());
                             }
@@ -339,15 +361,13 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyActors.size() - 1; i++) {
                             for (int j = i + 1; j < copyActors.size(); j++) {
-                                ok = false;
-                                if ((copyActors.get(i).compareTo(copyActors.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((copyActors.get(i).compareTo(copyActors.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
 
-                                if (ok) {
+
+                                if (((copyActors.get(i).compareTo(copyActors.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyActors.get(i).compareTo(copyActors.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))) {
+
                                     stringAux = copyActors.get(i);
                                     copyActors.set(i, copyActors.get(j));
                                     copyActors.set(j, stringAux);
@@ -371,8 +391,8 @@ public class ProcessAction {
             }
             case "movies" -> {
                 ArrayList<String> copyMovies = new ArrayList<>();
-                String year = action.getFilters().get(0).get(0);
-                String genre = action.getFilters().get(1).get(0);
+                String year = action.getFilters().get(Constants.YEAR_INDEX).get(0);
+                String genre = action.getFilters().get(Constants.GENRE_INDEX).get(0);
 
                 switch (action.getCriteria()) {
                     case "ratings" -> {
@@ -389,7 +409,8 @@ public class ProcessAction {
                                 }
                             }
 
-                            if (((year == null) || (movie.getYear() == Integer.parseInt(year))) && ((genre == null) || (movie.getGenres().contains(genre)))) {
+                            if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (movie.getGenres().contains(genre)))) {
                                 if (cnt != 0) {
                                     result /= cnt;
                                     movieRatings.add(result);
@@ -400,23 +421,21 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
-                                ok = false;
-                                if ((Double.compare(movieRatings.get(i), movieRatings.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((Double.compare(movieRatings.get(i), movieRatings.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if ((Double.compare(movieRatings.get(i), movieRatings.get(j)) == 0)) {
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((Double.compare(movieRatings.get(i),
+                                        movieRatings.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((Double.compare(movieRatings.get(i),
+                                        movieRatings.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))
+                                        || (((Double.compare(movieRatings.get(i),
+                                        movieRatings.get(j)) == 0))
+                                        && (((copyMovies.get(i)
+                                        .compareTo(copyMovies.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     doubleAux = movieRatings.get(i);
                                     movieRatings.set(i, movieRatings.get(j));
                                     movieRatings.set(j, doubleAux);
@@ -440,7 +459,8 @@ public class ProcessAction {
                                 }
                             }
 
-                            if (((year == null) || (movie.getYear() == Integer.parseInt(year))) && ((genre == null) || (movie.getGenres().contains(genre)))) {
+                            if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (movie.getGenres().contains(genre)))) {
                                 if (cnt != 0) {
                                     movieCount.add(cnt);
                                     copyMovies.add(movie.getTitle());
@@ -450,23 +470,17 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
-                                ok = false;
-                                if ((movieCount.get(i) < movieCount.get(j)) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((movieCount.get(i) > movieCount.get(j)) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if (movieCount.get(i).equals(movieCount.get(j))) {
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((movieCount.get(i) < movieCount.get(j))
+                                        && (action.getSortType().equals("desc")))
+                                        || ((movieCount.get(i) > movieCount.get(j))
+                                        && (action.getSortType().equals("asc")))
+                                        || (((movieCount.get(i).equals(movieCount.get(j))))
+                                        && (((copyMovies.get(i).compareTo(copyMovies.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     intAux = movieCount.get(i);
                                     movieCount.set(i, movieCount.get(j));
                                     movieCount.set(j, intAux);
@@ -483,7 +497,8 @@ public class ProcessAction {
                         ArrayList<Integer> movieDuration = new ArrayList<>();
 
                         for (MovieInputData movie : input.getMovies()) {
-                            if (((year == null) || (movie.getYear() == Integer.parseInt(year))) && ((genre == null) || (movie.getGenres().contains(genre)))) {
+                            if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (movie.getGenres().contains(genre)))) {
                                 movieDuration.add(movie.getDuration());
                                 copyMovies.add(movie.getTitle());
                             }
@@ -491,23 +506,17 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
-                                ok = false;
-                                if ((movieDuration.get(i) < movieDuration.get(j)) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((movieDuration.get(i) > movieDuration.get(j)) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if (movieDuration.get(i).equals(movieDuration.get(j))) {
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((movieDuration.get(i) < movieDuration.get(j))
+                                        && (action.getSortType().equals("desc")))
+                                        || ((movieDuration.get(i) > movieDuration.get(j))
+                                        && (action.getSortType().equals("asc")))
+                                        || (((movieDuration.get(i).equals(movieDuration.get(j))))
+                                        && (((copyMovies.get(i).compareTo(copyMovies.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     intAux = movieDuration.get(i);
                                     movieDuration.set(i, movieDuration.get(j));
                                     movieDuration.set(j, intAux);
@@ -531,7 +540,8 @@ public class ProcessAction {
                                 }
                             }
 
-                            if (((year == null) || (movie.getYear() == Integer.parseInt(year))) && ((genre == null) || (movie.getGenres().contains(genre)))) {
+                            if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (movie.getGenres().contains(genre)))) {
                                 if (result != 0) {
                                     movieCount.add(result);
                                     copyMovies.add(movie.getTitle());
@@ -541,23 +551,17 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
-                                ok = false;
-                                if ((movieCount.get(i) < movieCount.get(j)) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((movieCount.get(i) > movieCount.get(j)) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if (movieCount.get(i).equals(movieCount.get(j))) {
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((movieCount.get(i) < movieCount.get(j))
+                                        && (action.getSortType().equals("desc")))
+                                        || ((movieCount.get(i) > movieCount.get(j))
+                                        && (action.getSortType().equals("asc")))
+                                        || (((movieCount.get(i).equals(movieCount.get(j))))
+                                        && (((copyMovies.get(i).compareTo(copyMovies.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyMovies.get(i).compareTo(copyMovies.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     intAux = movieCount.get(i);
                                     movieCount.set(i, movieCount.get(j));
                                     movieCount.set(j, intAux);
@@ -585,8 +589,8 @@ public class ProcessAction {
             }
             case "shows" -> {
                 ArrayList<String> copyShows = new ArrayList<>();
-                String year = action.getFilters().get(0).get(0);
-                String genre = action.getFilters().get(1).get(0);
+                String year = action.getFilters().get(Constants.YEAR_INDEX).get(0);
+                String genre = action.getFilters().get(Constants.GENRE_INDEX).get(0);
 
                 switch (action.getCriteria()) {
                     case "ratings" -> {
@@ -610,7 +614,8 @@ public class ProcessAction {
                                 result += seasonResult;
                             }
 
-                            if (((year == null) || (serial.getYear() == Integer.parseInt(year))) && ((genre == null) || (serial.getGenres().contains(genre)))) {
+                            if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (serial.getGenres().contains(genre)))) {
                                 if (result != 0) {
                                     result /= serial.getNumberSeason();
                                     serialRatings.add(result);
@@ -621,23 +626,21 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
-                                ok = false;
-                                if ((Double.compare(serialRatings.get(i), serialRatings.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((Double.compare(serialRatings.get(i), serialRatings.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if ((Double.compare(serialRatings.get(i), serialRatings.get(j)) == 0)) {
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((Double.compare(serialRatings.get(i),
+                                        serialRatings.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((Double.compare(serialRatings.get(i),
+                                        serialRatings.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))
+                                        || (((Double.compare(serialRatings.get(i),
+                                        serialRatings.get(j)) == 0))
+                                        && (((copyShows.get(i)
+                                        .compareTo(copyShows.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyShows.get(i).compareTo(copyShows.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     doubleAux = serialRatings.get(i);
                                     serialRatings.set(i, serialRatings.get(j));
                                     serialRatings.set(j, doubleAux);
@@ -661,7 +664,8 @@ public class ProcessAction {
                                 }
                             }
 
-                            if (((year == null) || (serial.getYear() == Integer.parseInt(year))) && ((genre == null) || (serial.getGenres().contains(genre)))) {
+                            if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (serial.getGenres().contains(genre)))) {
                                 if (cnt != 0) {
                                     serialCount.add(cnt);
                                     copyShows.add(serial.getTitle());
@@ -671,23 +675,17 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
-                                ok = false;
-                                if ((serialCount.get(i) < serialCount.get(j)) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((serialCount.get(i) > serialCount.get(j)) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if (serialCount.get(i).equals(serialCount.get(j))) {
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((serialCount.get(i) < serialCount.get(j))
+                                        && (action.getSortType().equals("desc")))
+                                        || ((serialCount.get(i) > serialCount.get(j))
+                                        && (action.getSortType().equals("asc")))
+                                        || (((serialCount.get(i).equals(serialCount.get(j))))
+                                        && (((copyShows.get(i).compareTo(copyShows.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyShows.get(i).compareTo(copyShows.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     intAux = serialCount.get(i);
                                     serialCount.set(i, serialCount.get(j));
                                     serialCount.set(j, intAux);
@@ -700,11 +698,13 @@ public class ProcessAction {
                         }
                     }
                     case "longest" -> {
-                        int  intAux, totalDuration = 0;
+                        int  intAux, totalDuration;
                         ArrayList<Integer> serialDuration = new ArrayList<>();
 
                         for (SerialInputData serial : input.getSerials()) {
-                            if (((year == null) || (serial.getYear() == Integer.parseInt(year))) && ((genre == null) || (serial.getGenres().contains(genre)))) {
+                            totalDuration = 0;
+                            if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (serial.getGenres().contains(genre)))) {
                                 for (int i = 0; i < serial.getNumberSeason(); i++) {
                                     totalDuration += serial.getSeasons().get(i).getDuration();
                                 }
@@ -715,23 +715,17 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
-                                ok = false;
-                                if ((serialDuration.get(i) < serialDuration.get(j)) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((serialDuration.get(i) > serialDuration.get(j)) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if (serialDuration.get(i).equals(serialDuration.get(j))) {
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((serialDuration.get(i) < serialDuration.get(j))
+                                        && (action.getSortType().equals("desc")))
+                                        || ((serialDuration.get(i) > serialDuration.get(j))
+                                        && (action.getSortType().equals("asc")))
+                                        || (((serialDuration.get(i).equals(serialDuration.get(j))))
+                                        && (((copyShows.get(i).compareTo(copyShows.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyShows.get(i).compareTo(copyShows.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     intAux = serialDuration.get(i);
                                     serialDuration.set(i, serialDuration.get(j));
                                     serialDuration.set(j, intAux);
@@ -755,7 +749,8 @@ public class ProcessAction {
                                 }
                             }
 
-                            if (((year == null) || (serial.getYear() == Integer.parseInt(year))) && ((genre == null) || (serial.getGenres().contains(genre)))) {
+                            if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
+                                    && ((genre == null) || (serial.getGenres().contains(genre)))) {
                                 if (result != 0) {
                                     serialCount.add(result);
                                     copyShows.add(serial.getTitle());
@@ -765,23 +760,17 @@ public class ProcessAction {
 
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
-                                ok = false;
-                                if ((serialCount.get(i) < serialCount.get(j)) && (action.getSortType().equals("desc"))) {
-                                    ok = true;
-                                }
-                                if ((serialCount.get(i) > serialCount.get(j)) && (action.getSortType().equals("asc"))) {
-                                    ok = true;
-                                }
-                                if (serialCount.get(i).equals(serialCount.get(j))) {
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                        ok = true;
-                                    }
-                                    if ((copyShows.get(i).compareTo(copyShows.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                        ok = true;
-                                    }
-                                }
 
-                                if (ok) {
+                                if (((serialCount.get(i) < serialCount.get(j))
+                                        && (action.getSortType().equals("desc")))
+                                        || ((serialCount.get(i) > serialCount.get(j))
+                                        && (action.getSortType().equals("asc")))
+                                        || (((serialCount.get(i).equals(serialCount.get(j))))
+                                        && (((copyShows.get(i).compareTo(copyShows.get(j)) < 0)
+                                        && (action.getSortType().equals("desc")))
+                                        || ((copyShows.get(i).compareTo(copyShows.get(j)) > 0)
+                                        && (action.getSortType().equals("asc")))))) {
+
                                     intAux = serialCount.get(i);
                                     serialCount.set(i, serialCount.get(j));
                                     serialCount.set(j, intAux);
@@ -815,14 +804,16 @@ public class ProcessAction {
                 for (UserInputData user : input.getUsers()) {
                     cnt = 0;
                     for (MovieInputData movie : input.getMovies()) {
-                        if (!(movie.getRatings().get(input.getUsers().indexOf(user)).equals(0.0))) {
+                        if (!(movie.getRatings().get(input.getUsers().indexOf(user))
+                                .equals(0.0))) {
                             cnt++;
                         }
                     }
 
                     for (SerialInputData serial : input.getSerials()) {
                         for (Season season : serial.getSeasons()) {
-                            if (!(season.getRatings().get(input.getUsers().indexOf(user)).equals(0.0))) {
+                            if (!(season.getRatings().get(input.getUsers().indexOf(user))
+                                    .equals(0.0))) {
                                 cnt++;
                             }
                         }
@@ -836,23 +827,16 @@ public class ProcessAction {
 
                 for (int i = 0; i < copyUsers.size() - 1; i++) {
                     for (int j = i + 1; j < copyUsers.size(); j++) {
-                        ok = false;
-                        if ((userRatings.get(i) < userRatings.get(j)) && (action.getSortType().equals("desc"))) {
-                            ok = true;
-                        }
-                        if ((userRatings.get(i) > userRatings.get(j)) && (action.getSortType().equals("asc"))) {
-                            ok = true;
-                        }
-                        if (userRatings.get(i).equals(userRatings.get(j))) {
-                            if ((copyUsers.get(i).compareTo(copyUsers.get(j)) < 0) && (action.getSortType().equals("desc"))) {
-                                ok = true;
-                            }
-                            if ((copyUsers.get(i).compareTo(copyUsers.get(j)) > 0) && (action.getSortType().equals("asc"))) {
-                                ok = true;
-                            }
-                        }
 
-                        if (ok) {
+                        if (((userRatings.get(i) < userRatings.get(j))
+                                && (action.getSortType().equals("desc")))
+                                || ((userRatings.get(i) > userRatings.get(j))
+                                && (action.getSortType().equals("asc")))
+                                || (((userRatings.get(i).equals(userRatings.get(j))))
+                                && (((copyUsers.get(i).compareTo(copyUsers.get(j)) < 0)
+                                && (action.getSortType().equals("desc")))
+                                || ((copyUsers.get(i).compareTo(copyUsers.get(j)) > 0)
+                                && (action.getSortType().equals("asc")))))) {
                             intAux = userRatings.get(i);
                             userRatings.set(i, userRatings.get(j));
                             userRatings.set(j, intAux);
@@ -888,26 +872,368 @@ public class ProcessAction {
      * "recommendation" type command
      * @param action the action that needs to be done
      */
-    public void processRecommendation(ActionInputData action) {
+    public void processRecommendation(final ActionInputData action) {
+        JSONObject object = new JSONObject();
+        object.put(Constants.ID_STRING, action.getActionId());
+        StringBuilder message = new StringBuilder();
+
+        boolean ok;
+        UserInputData user = null;
+        for (UserInputData iterator : input.getUsers()) {
+            if (iterator.getUsername().equals(action.getUsername())) {
+                user = iterator;
+                break;
+            }
+        }
+
         switch (action.getType()) {
             case "standard" -> {
-                System.out.println("standard");
+                ok = true;
+                if (user == null) {
+                    message.append("StandardRecommendation cannot be applied!");
+                    break;
+                }
+
+                for (MovieInputData movie : input.getMovies()) {
+                    if (!(user.getHistory().containsKey(movie.getTitle()))) {
+                        ok = false;
+                        message.append("StandardRecommendation result: ");
+                        message.append(movie.getTitle());
+                        break;
+                    }
+                }
+
+                for (SerialInputData serial : input.getSerials()) {
+                    if (!(user.getHistory().containsKey(serial.getTitle())) && ok) {
+                        ok = false;
+                        message.append("StandardRecommendation result: ");
+                        message.append(serial.getTitle());
+                        break;
+                    }
+                }
+
+                if (ok) {
+                    message.append("StandardRecommendation cannot be applied!");
+                }
             }
             case "best_unseen" -> {
-                System.out.println("best_unseen");
+                int cnt;
+                double result, seasonRating, currentBestRating = -1.0;
+                String currentBestVideo = "";
+                ok = true;
+
+                if (user == null) {
+                    message.append("BestRatedUnseenRecommendation cannot be applied!");
+                    break;
+                }
+
+                for (MovieInputData movie : input.getMovies()) {
+                    cnt = 0;
+                    result = 0.0;
+                    for (Double movieRating : movie.getRatings()) {
+                        if (!(movieRating.equals(0.0))) {
+                            result += movieRating;
+                            cnt++;
+                        }
+                        if (cnt != 0) {
+                            result /= cnt;
+                        }
+                    }
+
+                    if (!(user.getHistory().containsKey(movie.getTitle()))) {
+                        ok = false;
+                        if (Double.compare(currentBestRating, result) < 0) {
+                            currentBestRating = result;
+                            currentBestVideo = movie.getTitle();
+                        }
+                    }
+                }
+
+                for (SerialInputData serial : input.getSerials()) {
+                    cnt = 0;
+                    result = 0.0;
+                    for (Season season : serial.getSeasons()) {
+                        seasonRating = 0.0;
+                        for (Double showRating : season.getRatings()) {
+                            if (!(showRating.equals(0.0))) {
+                                seasonRating += showRating;
+                                cnt++;
+                            }
+                            if (cnt != 0) {
+                                seasonRating /= cnt;
+                            }
+                        }
+                        result += seasonRating;
+                    }
+                    result /= serial.getNumberSeason();
+
+                    if (!(user.getHistory().containsKey(serial.getTitle()))) {
+                        ok = false;
+                        if (Double.compare(currentBestRating, result) < 0) {
+                            currentBestRating = result;
+                            currentBestVideo = serial.getTitle();
+                        }
+                    }
+                }
+
+                if (ok) {
+                    message.append("BestRatedUnseenRecommendation cannot be applied!");
+                } else {
+                    message.append("BestRatedUnseenRecommendation result: ");
+                    message.append(currentBestVideo);
+                }
             }
             case "popular" -> {
-                System.out.println("popular");
+                int cnt, intAux;
+                String stringAux;
+                boolean hasGenre;
+                ArrayList<Integer> popularity = new ArrayList<>();
+                ArrayList<String> copyGenres = new ArrayList<>();
+
+                if (user == null || user.getSubscriptionType().equals("BASIC")) {
+                    message.append("PopularRecommendation cannot be applied!");
+                    break;
+                }
+
+                for (Genre genre : Genre.values()) {
+                    cnt = 0;
+                    copyGenres.add(genre.toString());
+
+                    for (MovieInputData movie : input.getMovies()) {
+                        hasGenre = false;
+                        for (String movieGenre : movie.getGenres()) {
+                            if (genre.equals(Utils.stringToGenre(movieGenre))) {
+                                hasGenre = true;
+                                break;
+                            }
+                        }
+                        if (hasGenre) {
+                            for (UserInputData userIterator : input.getUsers()) {
+                                if (userIterator.getHistory().containsKey(movie.getTitle())) {
+                                    cnt += userIterator.getHistory().get(movie.getTitle());
+                                }
+                            }
+                        }
+                    }
+
+                    for (SerialInputData serial : input.getSerials()) {
+                        hasGenre = false;
+                        for (String serialGenre : serial.getGenres()) {
+                            if (genre.equals(Utils.stringToGenre(serialGenre))) {
+                                hasGenre = true;
+                                break;
+                            }
+                        }
+                        if (hasGenre) {
+                            for (UserInputData userIterator : input.getUsers()) {
+                                if (userIterator.getHistory().containsKey(serial.getTitle())) {
+                                    cnt += userIterator.getHistory().get(serial.getTitle());
+                                }
+                            }
+                        }
+                    }
+                    popularity.add(cnt);
+                }
+
+                for (int i = 0; i < copyGenres.size() - 1; i++) {
+                    for (int j = i + 1; j < copyGenres.size(); j++) {
+                        if (popularity.get(i) < popularity.get(j)) {
+                            intAux = popularity.get(i);
+                            popularity.set(i, popularity.get(j));
+                            popularity.set(j, intAux);
+
+                            stringAux = copyGenres.get(i);
+                            copyGenres.set(i, copyGenres.get(j));
+                            copyGenres.set(j, stringAux);
+                        }
+                    }
+                }
+
+                ok = true;
+                for (String genre : copyGenres) {
+                    if (!ok) {
+                        break;
+                    }
+
+                    for (MovieInputData movie : input.getMovies()) {
+                        for (String movieGenre : movie.getGenres()) {
+                            if (movieGenre.toLowerCase().equals(genre.toLowerCase())) {
+                                if (!user.getHistory().containsKey(movie.getTitle()) && ok) {
+                                    ok = false;
+                                    message.append("PopularRecommendation result: ");
+                                    message.append(movie.getTitle());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    for (SerialInputData serial : input.getSerials()) {
+                        for (String serialGenre : serial.getGenres()) {
+                            if (serialGenre.toLowerCase().equals(genre.toLowerCase())) {
+                                if (!user.getHistory().containsKey(serial.getTitle()) && ok) {
+                                    ok = false;
+                                    message.append("PopularRecommendation result: ");
+                                    message.append(serial.getTitle());
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (ok) {
+                    message.append("PopularRecommendation cannot be applied!");
+                }
             }
             case "favorite" -> {
-                System.out.println("favorite");
-            }case "search" -> {
-                System.out.println("search");
+                int cnt, currentMostNum = 0;
+                String currentMostFav = "";
+                ok = true;
+
+                if (user == null || user.getSubscriptionType().equals("BASIC")) {
+                    message.append("FavoriteRecommendation cannot be applied!");
+                    break;
+                }
+
+                for (MovieInputData movie : input.getMovies()) {
+                    cnt = 0;
+                    for (UserInputData userIterator : input.getUsers()) {
+                        if (userIterator.getFavoriteMovies().contains(movie.getTitle())) {
+                            cnt++;
+                        }
+                    }
+
+                    if (!(user.getHistory().containsKey(movie.getTitle())) && cnt != 0) {
+                        ok = false;
+                        if (currentMostNum < cnt) {
+                            currentMostNum = cnt;
+                            currentMostFav = movie.getTitle();
+                        }
+                    }
+                }
+
+                for (SerialInputData serial : input.getSerials()) {
+                    cnt = 0;
+                    for (UserInputData userIterator : input.getUsers()) {
+                        if (userIterator.getFavoriteMovies().contains(serial.getTitle())) {
+                            cnt++;
+                        }
+                    }
+
+                    if (!(user.getHistory().containsKey(serial.getTitle())) && cnt != 0) {
+                        ok = false;
+                        if (currentMostNum < cnt) {
+                            currentMostNum = cnt;
+                            currentMostFav = serial.getTitle();
+                        }
+                    }
+                }
+
+                if (ok) {
+                    message.append("FavoriteRecommendation cannot be applied!");
+                } else {
+                    message.append("FavoriteRecommendation result: ");
+                    message.append(currentMostFav);
+                }
+            }
+            case "search" -> {
+                int cnt;
+                double result, seasonRating, doubleAux;
+                String stringAux;
+                ok = true;
+                ArrayList<String> copyVideos = new ArrayList<>();
+                ArrayList<Double> videoRatings = new ArrayList<>();
+
+                if (user == null || user.getSubscriptionType().equals("BASIC")) {
+                    message.append("SearchRecommendation cannot be applied!");
+                    break;
+                }
+
+                for (MovieInputData movie : input.getMovies()) {
+                    cnt = 0;
+                    result = 0.0;
+                    for (Double movieRating : movie.getRatings()) {
+                        if (!(movieRating.equals(0.0))) {
+                            result += movieRating;
+                            cnt++;
+                        }
+                    }
+                    if (cnt != 0) {
+                        result /= cnt;
+                    }
+
+                    if (movie.getGenres().contains(action.getGenre())
+                            && !(user.getHistory().containsKey(movie.getTitle()))) {
+                        ok = false;
+                        copyVideos.add(movie.getTitle());
+                        videoRatings.add(result);
+                    }
+                }
+
+                for (SerialInputData serial : input.getSerials()) {
+                    cnt = 0;
+                    result = 0.0;
+                    for (Season season : serial.getSeasons()) {
+                        seasonRating = 0.0;
+                        for (Double showRating : season.getRatings()) {
+                            if (!(showRating.equals(0.0))) {
+                                seasonRating += showRating;
+                                cnt++;
+                            }
+                            if (cnt != 0) {
+                                seasonRating /= cnt;
+                            }
+                        }
+                        result += seasonRating;
+                    }
+                    result /= serial.getNumberSeason();
+
+                    if (serial.getGenres().contains(action.getGenre())
+                            && !(user.getHistory().containsKey(serial.getTitle()))) {
+                        ok = false;
+                        copyVideos.add(serial.getTitle());
+                        videoRatings.add(result);
+                    }
+                }
+
+                if (ok) {
+                    message.append("SearchRecommendation cannot be applied!");
+                } else {
+                    message.append("SearchRecommendation result: [");
+
+                    for (int i = 0; i < copyVideos.size() - 1; i++) {
+                        for (int j = i + 1; j < copyVideos.size(); j++) {
+
+                            if (Double.compare(videoRatings.get(i), videoRatings.get(j)) > 0
+                                    || (videoRatings.get(i).equals(videoRatings.get(j))
+                                    && (copyVideos.get(i).compareTo(copyVideos.get(j)) > 0))) {
+
+                                doubleAux = videoRatings.get(i);
+                                videoRatings.set(i, videoRatings.get(j));
+                                videoRatings.set(j, doubleAux);
+
+                                stringAux = copyVideos.get(i);
+                                copyVideos.set(i, copyVideos.get(j));
+                                copyVideos.set(j, stringAux);
+                            }
+                        }
+                    }
+
+                    for (int i = 0; i < copyVideos.size() - 1; i++) {
+                        message.append(copyVideos.get(i));
+                        message.append(", ");
+                    }
+                    if (copyVideos.size() > 0) {
+                        message.append(copyVideos.get(copyVideos.size() - 1));
+                    }
+
+                    message.append("]");
+                }
             }
             default -> System.out.println("Incorrect recommendation");
-
-
         }
+        object.put(Constants.MESSAGE, message.toString());
+        arrayResult.add(object);
     }
-
 }

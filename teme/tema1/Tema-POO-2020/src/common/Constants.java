@@ -9,6 +9,10 @@ public final class Constants {
     private Constants() {
     }
 
+    public static final int YEAR_INDEX = 0;
+    public static final int GENRE_INDEX = 1;
+    public static final int WORDS_INDEX = 2;
+    public static final int AWARDS_INDEX = 3;
     public static final String DATABASE = "database";
     public static final String ACTORS = "actors";
     public static final String MOVIES = "movies";
