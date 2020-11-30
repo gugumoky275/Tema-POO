@@ -1,38 +1,64 @@
-Object Oriented Programming Course
-Homework - VideosDB
+@Copyright Baciu Alexandru-Victor 322CA
 
-November 2020
+---------------------------------------------------------------------------------------------------
 
-# Info
-https://ocw.cs.pub.ro/courses/poo-ca-cd/teme/tema
+Limba:
 
-# About the code
+    Am ales sa folosesc romana pentru README (pentru a fi intelese mai usor explicatiile), dar
+engleza pentru cod si comentarii, deoarece scheletul era deja in acest format (si cerinta care
+trebuie sa corespunda README era in romana).
 
-We provide the input tests, the logic that parses them and the checker that runs them.
+Alte aspecte:
 
-* test_db - contains the tests in JSON format
-* src
-   * checker - the checker's sources including the checkstyle necessary files, not to be modified
-   * fileio - classes for parsing the input files, not to be modified
-   * common, utils
-        * contain utility classes with constants and static methods
-        * you can add your own functionality in the existing classes or add new classes as well
-   * actor
-        * contains an enum for the types of awards an actor can have - do not modify it
-        * you can add here your actor related classes
-   * entertainment
-        * contains an enum for the supported video genres - do not modify it
-        * class for representing a Season of a tv show - do not modify it
-        * you can add here your entertainment related classes
+    Pentru obiectele JSON apareau warning-uri de "unchecked" asa ca, pentru ca scheletul
+era deja construit cu warning-uri de la Intelij am dat supress la warning-urile de acest gen.
 
-We encourage you to organize your implementation in packages based on the functionality their classes offer. Try to keep
-your code modular, readable and documented.
+    Am modificat clasa MovieInputData pentru a avea un camp de ratings pentru fiecare film, de
+lungime cati utilizatori sunt, deci pe pozitia i, ratings(i) = ratingul userului i. Am schimbat
+totodata si constructorul + getter setter. Analog in Season am modificat setterul sa creeze
+propriul ArrayList de ratings, in loc sa copieze referinta unuia (putea fi lasat si ca inainte dar
+m-a ajutat la creare).
 
-# Testing
+    Am adaugat 4 constante in Constants, pentru a nu hardcoda indexul in lista de filtre.
 
-The Main class runs the checker on your implementation. Add the entry point to your implementation in it.
+    Toata implementarea este intr-o singura clasa cu 3 metode dupa tipul actiunii, fiecare switch
+putea sa duca in mai multe metode (ex un switch cu 4 cazuri sa apeleze 4 metode dupa caz) dar
+acest lucru doar impartea codul, nu schimba prea multe.
 
-Run Main to test your implementation from the IDE or from command line.
+Link GitHub (repo provate, dupa deadline hard il fac public):
 
-Run the main method from Test class with the name of the input file from the command line and the result will be written
-to the out.txt file. Thus, you can compare this result with ref.
+    https://github.com/gugumoky275/Tema-POO/tree/tema1-2020/teme/tema1/Tema-POO-2020
+
+---------------------------------------------------------------------------------------------------
+
+Implementare:
+
+    In main de unde incepe logica programului meu am pus un switch care analizeaza tipul actiunii,
+comanda, interogare sau recomandare. In functie de aces tip apeleaza metoda respectiva dintr-o
+clasa.
+
+    Clasa care rezolva efectiv problema este ProcessAction din pachetul solution. Un obiect de
+acest tip are drept campuri un Imput input in care retin baza de date citita in main si un
+JSONArray, copiind referinta celui din main. Clasa are is 3 metode, dupa numele actiunii procesate.
+
+    Ficare clasa are un switch pentru subtipul actiunii ce trebuie indeplinite (ex rate, favourite
+si view la command, etc). Pentru querry este nevoie de un switch in plus pentru categoria "show",
+lucru neprecizat in enuntul temei.
+
+    Pentru a retine rating-urile am facut un ArrayList de double, pentru fiecare film si sezon, cu
+functionalitatea precizata la "Alte aspecte".
+
+    Pentru fiecare sortare dupa un criteriu, creez 2 ArrayList-uri, unul pentru numele filmului/
+serialuli/actorului, de tip String, si unul pentru NumarFavorite/Ratings/..., de tip Double/Integer
+dupa caz. Adaug pe rand in aceste liste obiectele ce indeplinesc criteriile de selectie si dupa
+aceea cu bubblesort determin daca cate 2 elemente trebuie inversate cu o conditie if ce include:
+Cazul sortare strict crescatoare/descrescatoare dupa campul reprezentat de Double/Int, pentru
+egalitate la fel dupa campul de String. La final vad daca am cel putin atatea elemente cate
+trebuie sa afisez, daca nu, le pun pe toate cu un for intr-un JSONObject.
+
+    Pentru recomandarile dupa popularitate am facut inca un ArrayList pentru genuri, acompaniat
+de unul pentru popularitate (suma tuturor vizualizarilor genului).
+
+    Variabila "ok" este des folosita pentru a verifica daca dupa parcurgerea unei liste de obiecte
+am gasit cel putin unul care sa indeplineasca un anumit criteriu, altfel se trateaza un caz special
+(mesaj de eroare).

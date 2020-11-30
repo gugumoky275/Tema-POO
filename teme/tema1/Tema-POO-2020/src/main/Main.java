@@ -76,8 +76,10 @@ public final class Main {
 
         Writer fileWriter = new Writer(filePath2);
         JSONArray arrayResult = new JSONArray();
-        // End of your code
 
+        // The beginning of my implementation
+
+        // Initialization of all show ratings
         List<Double> showRatings = new ArrayList<>();
         for (int i = 0; i < input.getUsers().size(); i++) {
             showRatings.add(0.0);
@@ -92,6 +94,7 @@ public final class Main {
             }
         }
 
+        // Processing each action at a time, in class ProcessAction
         ProcessAction processAction = new ProcessAction(input, arrayResult);
         for (ActionInputData action : input.getCommands()) {
             switch (action.getActionType()) {
@@ -101,9 +104,8 @@ public final class Main {
                 default -> System.out.println("Incorrect action");
             }
         }
+        // The end of my implementation
 
-
-        // End of my code
         fileWriter.closeJSON(arrayResult);
     }
 }

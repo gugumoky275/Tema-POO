@@ -29,6 +29,7 @@ public class ProcessAction {
      */
     private final JSONArray arrayResult;
 
+    // Copy the database and the JSONArray where the answer will be put
     public ProcessAction(final Input input, final JSONArray arrayResult) {
         this.input = input;
         this.arrayResult = arrayResult;
@@ -39,6 +40,7 @@ public class ProcessAction {
      * "action" type command
      * @param action the action that needs to be done
      */
+    @SuppressWarnings("unchecked")
     public void processCommand(final ActionInputData action) {
         JSONObject object = new JSONObject();
         object.put(Constants.ID_STRING, action.getActionId());
@@ -46,6 +48,8 @@ public class ProcessAction {
         switch (action.getType()) {
             case "favorite" -> {
                 for (UserInputData user : input.getUsers()) {
+
+                    // Find user in database and check history
                     if (user.getUsername().equals(action.getUsername())) {
                         if (user.getHistory().containsKey(action.getTitle())) {
                             if (user.getFavoriteMovies().contains(action.getTitle())) {
@@ -70,6 +74,8 @@ public class ProcessAction {
             }
             case "view" -> {
                 for (UserInputData user : input.getUsers()) {
+
+                    // Find user in database and check if seen
                     if (user.getUsername().equals(action.getUsername())) {
                         if (user.getHistory().containsKey(action.getTitle())) {
                             user.getHistory().put(action.getTitle(),
@@ -94,8 +100,12 @@ public class ProcessAction {
 
                 for (UserInputData user : input.getUsers()) {
                     cnt++;
+
+                    // Find user in database and check if seen video, or rated already
                     if (user.getUsername().equals(action.getUsername())) {
                         if (user.getHistory().containsKey(action.getTitle())) {
+
+                            // Search the video through movies
                             for (MovieInputData movie : input.getMovies()) {
                                 if (action.getTitle().equals(movie.getTitle())) {
                                     if (!(movie.getRatings().get(cnt).equals(0.0))) {
@@ -117,6 +127,8 @@ public class ProcessAction {
                                     break;
                                 }
                             }
+
+                            // Search the video through serials
                             for (SerialInputData serial : input.getSerials()) {
                                 if (action.getTitle().equals(serial.getTitle())) {
                                     Season season =
@@ -143,6 +155,8 @@ public class ProcessAction {
                                 }
                             }
                         }
+
+                        // Case not found in history
                         if (ok) {
                             object.put(Constants.MESSAGE, "error -> "
                                     + action.getTitle()
@@ -162,6 +176,7 @@ public class ProcessAction {
      * "query" type command
      * @param action the action that needs to be done
      */
+    @SuppressWarnings("unchecked")
     public void processQuery(final ActionInputData action) {
         JSONObject object = new JSONObject();
         object.put(Constants.ID_STRING, action.getActionId());
@@ -183,6 +198,7 @@ public class ProcessAction {
                         ArrayList<Double> serialRatings = new ArrayList<>();
                         ArrayList<Double> actorRatings = new ArrayList<>();
 
+                        // Create movie average rating from all user ratings
                         for (MovieInputData movie : input.getMovies()) {
                             result = 0.0;
                             cnt = 0;
@@ -198,6 +214,7 @@ public class ProcessAction {
                             movieRatings.add(result);
                         }
 
+                        // Create serial average rating from all user ratings
                         for (SerialInputData serial : input.getSerials()) {
                             result = 0.0;
                             for (Season season : serial.getSeasons()) {
@@ -218,9 +235,11 @@ public class ProcessAction {
                             serialRatings.add(result);
                         }
 
+                        // For each actor search the videos they played in
                         for (ActorInputData actor : input.getActors()) {
                             result = 0.0;
                             cnt = 0;
+
                             for (String title : actor.getFilmography()) {
                                 for (MovieInputData movie : input.getMovies()) {
                                     if (movie.getTitle().equals(title)) {
@@ -233,6 +252,7 @@ public class ProcessAction {
                                         }
                                     }
                                 }
+
                                 for (SerialInputData serial : input.getSerials()) {
                                     if (serial.getTitle().equals(title)) {
                                         if (!(serialRatings.get(input.getSerials().indexOf(serial))
@@ -246,6 +266,7 @@ public class ProcessAction {
                                 }
                             }
 
+                            // Add actor to the list if rating nonzero
                             if (cnt != 0) {
                                 result /= cnt;
                                 actorRatings.add(result);
@@ -253,6 +274,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort actors by rating
                         for (int i = 0; i < copyActors.size() - 1; i++) {
                             for (int j = i + 1; j < copyActors.size(); j++) {
 
@@ -284,6 +306,8 @@ public class ProcessAction {
                         int result, intAux;
                         ArrayList<Integer> awardsCount = new ArrayList<>();
 
+                        // For each actor calculate their total awards count
+                        // and search for all filter awards
                         for (ActorInputData actor : input.getActors()) {
                             result = 0;
 
@@ -302,12 +326,14 @@ public class ProcessAction {
                                 }
                             }
 
+                            // If actor has all awards put into list
                             if (ok) {
                                 awardsCount.add(result);
                                 copyActors.add(actor.getName());
                             }
                         }
 
+                        // Sort by total awards count
                         for (int i = 0; i < copyActors.size() - 1; i++) {
                             for (int j = i + 1; j < copyActors.size(); j++) {
 
@@ -336,6 +362,7 @@ public class ProcessAction {
                         String description;
                         boolean auxiliaryOk;
 
+                        // For all actors search filter words in their description
                         for (ActorInputData actor : input.getActors()) {
                             description = actor.getCareerDescription().toLowerCase();
                             auxiliaryOk = true;
@@ -354,11 +381,13 @@ public class ProcessAction {
                                 }
                             }
 
+                            // If all words are found add to list
                             if (auxiliaryOk) {
                                 copyActors.add(actor.getName());
                             }
                         }
 
+                        // Sort alphabetically
                         for (int i = 0; i < copyActors.size() - 1; i++) {
                             for (int j = i + 1; j < copyActors.size(); j++) {
 
@@ -377,6 +406,10 @@ public class ProcessAction {
                     }
                     default -> System.out.println("Incorrect query");
                 }
+
+                // For all cases at the end take the minimum between
+                // the maximum length of elements and the required amount
+                // from the list
                 cnt = action.getNumber();
                 if (cnt > copyActors.size()) {
                     cnt = copyActors.size();
@@ -399,6 +432,7 @@ public class ProcessAction {
                         double result, doubleAux;
                         ArrayList<Double> movieRatings = new ArrayList<>();
 
+                        // Calculate the ratings for each movie
                         for (MovieInputData movie : input.getMovies()) {
                             result = 0.0;
                             cnt = 0;
@@ -409,6 +443,7 @@ public class ProcessAction {
                                 }
                             }
 
+                            // Add to list if non 0 and respects filters
                             if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
                                     && ((genre == null) || (movie.getGenres().contains(genre)))) {
                                 if (cnt != 0) {
@@ -419,6 +454,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort movies by rating
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
 
@@ -451,6 +487,7 @@ public class ProcessAction {
                         int  intAux;
                         ArrayList<Integer> movieCount = new ArrayList<>();
 
+                        // Count number of times movie appears as fav
                         for (MovieInputData movie : input.getMovies()) {
                             cnt = 0;
                             for (UserInputData user : input.getUsers()) {
@@ -459,6 +496,7 @@ public class ProcessAction {
                                 }
                             }
 
+                            // Add if nonzero
                             if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
                                     && ((genre == null) || (movie.getGenres().contains(genre)))) {
                                 if (cnt != 0) {
@@ -468,6 +506,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort by number of appearances
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
 
@@ -496,6 +535,7 @@ public class ProcessAction {
                         int  intAux;
                         ArrayList<Integer> movieDuration = new ArrayList<>();
 
+                        // Add movie lengths to list
                         for (MovieInputData movie : input.getMovies()) {
                             if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
                                     && ((genre == null) || (movie.getGenres().contains(genre)))) {
@@ -504,6 +544,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort by duration
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
 
@@ -532,6 +573,7 @@ public class ProcessAction {
                         int  result, intAux;
                         ArrayList<Integer> movieCount = new ArrayList<>();
 
+                        // Calculate view count for each movie
                         for (MovieInputData movie : input.getMovies()) {
                             result = 0;
                             for (UserInputData user : input.getUsers()) {
@@ -540,6 +582,7 @@ public class ProcessAction {
                                 }
                             }
 
+                            // Add to list if filters apply
                             if (((year == null) || (movie.getYear() == Integer.parseInt(year)))
                                     && ((genre == null) || (movie.getGenres().contains(genre)))) {
                                 if (result != 0) {
@@ -549,6 +592,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort by counter
                         for (int i = 0; i < copyMovies.size() - 1; i++) {
                             for (int j = i + 1; j < copyMovies.size(); j++) {
 
@@ -575,6 +619,8 @@ public class ProcessAction {
                     }
                     default -> System.out.println("Incorrect query");
                 }
+
+                // In all cases take as many videos as possible, up to the number required
                 cnt = action.getNumber();
                 if (cnt > copyMovies.size()) {
                     cnt = copyMovies.size();
@@ -597,6 +643,7 @@ public class ProcessAction {
                         double result, seasonResult, doubleAux;
                         ArrayList<Double> serialRatings = new ArrayList<>();
 
+                        // Calculate ratings for each show by sum of seasons
                         for (SerialInputData serial : input.getSerials()) {
                             result = 0.0;
                             for (Season season : serial.getSeasons()) {
@@ -614,6 +661,7 @@ public class ProcessAction {
                                 result += seasonResult;
                             }
 
+                            // Add rating to list if filters apply and nonzero
                             if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
                                     && ((genre == null) || (serial.getGenres().contains(genre)))) {
                                 if (result != 0) {
@@ -624,6 +672,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort by ratings
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
 
@@ -656,6 +705,7 @@ public class ProcessAction {
                         int  intAux;
                         ArrayList<Integer> serialCount = new ArrayList<>();
 
+                        // Count times it's a favourite video
                         for (SerialInputData serial : input.getSerials()) {
                             cnt = 0;
                             for (UserInputData user : input.getUsers()) {
@@ -664,6 +714,7 @@ public class ProcessAction {
                                 }
                             }
 
+                            // Add to list
                             if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
                                     && ((genre == null) || (serial.getGenres().contains(genre)))) {
                                 if (cnt != 0) {
@@ -673,6 +724,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort by times favourite
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
 
@@ -701,6 +753,7 @@ public class ProcessAction {
                         int  intAux, totalDuration;
                         ArrayList<Integer> serialDuration = new ArrayList<>();
 
+                        // Calculate duration by sum of serials and add to list
                         for (SerialInputData serial : input.getSerials()) {
                             totalDuration = 0;
                             if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
@@ -713,6 +766,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort by duration
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
 
@@ -741,6 +795,7 @@ public class ProcessAction {
                         int  result, intAux;
                         ArrayList<Integer> serialCount = new ArrayList<>();
 
+                        // Count numbers it was viewed
                         for (SerialInputData serial : input.getSerials()) {
                             result = 0;
                             for (UserInputData user : input.getUsers()) {
@@ -749,6 +804,7 @@ public class ProcessAction {
                                 }
                             }
 
+                            // Add to list
                             if (((year == null) || (serial.getYear() == Integer.parseInt(year)))
                                     && ((genre == null) || (serial.getGenres().contains(genre)))) {
                                 if (result != 0) {
@@ -758,6 +814,7 @@ public class ProcessAction {
                             }
                         }
 
+                        // Sort by favourite count
                         for (int i = 0; i < copyShows.size() - 1; i++) {
                             for (int j = i + 1; j < copyShows.size(); j++) {
 
@@ -784,6 +841,8 @@ public class ProcessAction {
                     }
                     default -> System.out.println("Incorrect query");
                 }
+
+                // In all cases take as many videos as possible, up to the number required
                 cnt = action.getNumber();
                 if (cnt > copyShows.size()) {
                     cnt = copyShows.size();
@@ -801,6 +860,7 @@ public class ProcessAction {
                 ArrayList<String> copyUsers = new ArrayList<>();
                 ArrayList<Integer> userRatings = new ArrayList<>();
 
+                // For each user count number of times they rated
                 for (UserInputData user : input.getUsers()) {
                     cnt = 0;
                     for (MovieInputData movie : input.getMovies()) {
@@ -825,6 +885,7 @@ public class ProcessAction {
                     }
                 }
 
+                // Sort by number of times they rated
                 for (int i = 0; i < copyUsers.size() - 1; i++) {
                     for (int j = i + 1; j < copyUsers.size(); j++) {
 
@@ -848,6 +909,7 @@ public class ProcessAction {
                     }
                 }
 
+                // Add to list the appropriate number of users
                 cnt = action.getNumber();
                 if (cnt > copyUsers.size()) {
                     cnt = copyUsers.size();
@@ -872,12 +934,15 @@ public class ProcessAction {
      * "recommendation" type command
      * @param action the action that needs to be done
      */
+    @SuppressWarnings("unchecked")
     public void processRecommendation(final ActionInputData action) {
         JSONObject object = new JSONObject();
         object.put(Constants.ID_STRING, action.getActionId());
         StringBuilder message = new StringBuilder();
 
         boolean ok;
+
+        // Search the user that launched the action
         UserInputData user = null;
         for (UserInputData iterator : input.getUsers()) {
             if (iterator.getUsername().equals(action.getUsername())) {
@@ -894,6 +959,7 @@ public class ProcessAction {
                     break;
                 }
 
+                // Search first movie available
                 for (MovieInputData movie : input.getMovies()) {
                     if (!(user.getHistory().containsKey(movie.getTitle()))) {
                         ok = false;
@@ -903,6 +969,7 @@ public class ProcessAction {
                     }
                 }
 
+                // Search first serial available
                 for (SerialInputData serial : input.getSerials()) {
                     if (!(user.getHistory().containsKey(serial.getTitle())) && ok) {
                         ok = false;
@@ -927,6 +994,7 @@ public class ProcessAction {
                     break;
                 }
 
+                // Calculate movie ratings and step by step find the maximum rating of unseen movie
                 for (MovieInputData movie : input.getMovies()) {
                     cnt = 0;
                     result = 0.0;
@@ -949,6 +1017,7 @@ public class ProcessAction {
                     }
                 }
 
+                // Calculate serial ratings and step by step find the best rating of unseen serials
                 for (SerialInputData serial : input.getSerials()) {
                     cnt = 0;
                     result = 0.0;
@@ -976,6 +1045,7 @@ public class ProcessAction {
                     }
                 }
 
+                // Check if any video was found
                 if (ok) {
                     message.append("BestRatedUnseenRecommendation cannot be applied!");
                 } else {
@@ -995,6 +1065,7 @@ public class ProcessAction {
                     break;
                 }
 
+                // For each genre calculate popularity for movies
                 for (Genre genre : Genre.values()) {
                     cnt = 0;
                     copyGenres.add(genre.toString());
@@ -1016,6 +1087,7 @@ public class ProcessAction {
                         }
                     }
 
+                    // For each genre calculate popularity for serials
                     for (SerialInputData serial : input.getSerials()) {
                         hasGenre = false;
                         for (String serialGenre : serial.getGenres()) {
@@ -1035,6 +1107,7 @@ public class ProcessAction {
                     popularity.add(cnt);
                 }
 
+                // Sort genres by populairty
                 for (int i = 0; i < copyGenres.size() - 1; i++) {
                     for (int j = i + 1; j < copyGenres.size(); j++) {
                         if (popularity.get(i) < popularity.get(j)) {
@@ -1050,6 +1123,8 @@ public class ProcessAction {
                 }
 
                 ok = true;
+
+                // For each genre search all videos of that genre, and take the first unseen
                 for (String genre : copyGenres) {
                     if (!ok) {
                         break;
@@ -1082,6 +1157,7 @@ public class ProcessAction {
                     }
                 }
 
+                // If no suitable video was found
                 if (ok) {
                     message.append("PopularRecommendation cannot be applied!");
                 }
@@ -1096,6 +1172,7 @@ public class ProcessAction {
                     break;
                 }
 
+                // Count times movies appear as favourites
                 for (MovieInputData movie : input.getMovies()) {
                     cnt = 0;
                     for (UserInputData userIterator : input.getUsers()) {
@@ -1113,6 +1190,7 @@ public class ProcessAction {
                     }
                 }
 
+                // Count times serials appear as favourites
                 for (SerialInputData serial : input.getSerials()) {
                     cnt = 0;
                     for (UserInputData userIterator : input.getUsers()) {
@@ -1130,6 +1208,7 @@ public class ProcessAction {
                     }
                 }
 
+                // If no video unseen was found
                 if (ok) {
                     message.append("FavoriteRecommendation cannot be applied!");
                 } else {
@@ -1150,6 +1229,7 @@ public class ProcessAction {
                     break;
                 }
 
+                // Calculate movie ratings and add if criteria is met and unseen
                 for (MovieInputData movie : input.getMovies()) {
                     cnt = 0;
                     result = 0.0;
@@ -1171,6 +1251,7 @@ public class ProcessAction {
                     }
                 }
 
+                // Calculate serial ratings and add if criteria is met and unseen
                 for (SerialInputData serial : input.getSerials()) {
                     cnt = 0;
                     result = 0.0;
@@ -1197,11 +1278,13 @@ public class ProcessAction {
                     }
                 }
 
+                // Check if no unseen video of that criteria was found
                 if (ok) {
                     message.append("SearchRecommendation cannot be applied!");
                 } else {
                     message.append("SearchRecommendation result: [");
 
+                    // Sort by ratings
                     for (int i = 0; i < copyVideos.size() - 1; i++) {
                         for (int j = i + 1; j < copyVideos.size(); j++) {
 
@@ -1220,6 +1303,7 @@ public class ProcessAction {
                         }
                     }
 
+                    // Add all the videos found
                     for (int i = 0; i < copyVideos.size() - 1; i++) {
                         message.append(copyVideos.get(i));
                         message.append(", ");

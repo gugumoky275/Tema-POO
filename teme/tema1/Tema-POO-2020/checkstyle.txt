@@ -1,6 +1,5 @@
 Starting audit...
-[ERROR] C:\Users\Ale.DESKTOP-T0P8Q7L\Desktop\Tema1POO\teme\teme\tema1\Tema-POO-2020\.\src\solution\ProcessAction.java:165:5: Method length is 704 lines (max allowed is 150). [MethodLength]
-[ERROR] C:\Users\Ale.DESKTOP-T0P8Q7L\Desktop\Tema1POO\teme\teme\tema1\Tema-POO-2020\.\src\solution\ProcessAction.java:875:5: Method length is 364 lines (max allowed is 150). [MethodLength]
-[ERROR] C:\Users\Ale.DESKTOP-T0P8Q7L\Desktop\Tema1POO\teme\teme\tema1\Tema-POO-2020\.\src\solution\ProcessAction.java:1207: Line has trailing spaces. [RegexpSingleline]
+[ERROR] C:\Users\Ale.DESKTOP-T0P8Q7L\Desktop\Tema1POO\teme\teme\tema1\Tema-POO-2020\.\src\solution\ProcessAction.java:179:5: Method length is 751 lines (max allowed is 150). [MethodLength]
+[ERROR] C:\Users\Ale.DESKTOP-T0P8Q7L\Desktop\Tema1POO\teme\teme\tema1\Tema-POO-2020\.\src\solution\ProcessAction.java:937:5: Method length is 385 lines (max allowed is 150). [MethodLength]
 Audit done.
-Checkstyle ends with 3 errors.
+Checkstyle ends with 2 errors.
